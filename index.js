@@ -5,7 +5,16 @@ const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://studybuddy-org.web.app",
+      "https://studybuddy-org.firebaseapp.com",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uzy5irc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -21,11 +30,11 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.connect();
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
 
     const database = client.db("studyBuddy");
     const assignments = database.collection("assignments");
