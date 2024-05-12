@@ -42,6 +42,13 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/assignments", async (req, res) => {
+      const assignment = req.body;
+      const result = await assignments.insertOne(assignment);
+      console.log(assignment);
+      res.send(result);
+    });
+
     app.get("/totalAssignments", async (req, res) => {
       const count = await assignments.estimatedDocumentCount();
       res.send({ count });
