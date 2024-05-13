@@ -63,6 +63,12 @@ async function run() {
       }
     });
 
+    app.get("/featured", async (req, res) => {
+      const query = { deadline: "23/05/2024" };
+      const result = await assignments.find(query).toArray();
+      res.send(result);
+    });
+
     app.post("/assignments", async (req, res) => {
       const assignment = req.body;
       const result = await assignments.insertOne(assignment);
