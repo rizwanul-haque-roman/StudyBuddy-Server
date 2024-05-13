@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -69,13 +69,6 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/assignments", async (req, res) => {
-      const assignment = req.body;
-      const result = await assignments.insertOne(assignment);
-      console.log(assignment);
-      res.send(result);
-    });
-
     app.get("/totalAssignments", async (req, res) => {
       const difficulty = req.query.difficulty;
       console.log(difficulty);
@@ -88,6 +81,21 @@ async function run() {
         });
         res.send({ count });
       }
+    });
+
+    app.post("/assignments", async (req, res) => {
+      const assignment = req.body;
+      const result = await assignments.insertOne(assignment);
+      console.log(assignment);
+      res.send(result);
+    });
+
+    app.delete("/assignments", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+      console.log(query);
+      const result = await assignments.deleteOne(query);
+      res.send(result);
     });
   } finally {
     // await client.close();
