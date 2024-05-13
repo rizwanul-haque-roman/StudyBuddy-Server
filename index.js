@@ -42,13 +42,25 @@ async function run() {
     app.get("/assignments", async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
-      console.log(page, size);
-      const result = await assignments
-        .find()
-        .skip(page * size)
-        .limit(size)
-        .toArray();
-      res.send(result);
+      const difficulty = req.query.difficulty;
+      const query = { difficulty: difficulty };
+      // console.log(page, size, difficulty);
+      console.log(difficulty);
+      if (difficulty === "" || difficulty === "all") {
+        const result = await assignments
+          .find()
+          .skip(page * size)
+          .limit(size)
+          .toArray();
+        res.send(result);
+      } else {
+        const result = await assignments
+          .find(query)
+          .skip(page * size)
+          .limit(size)
+          .toArray();
+        res.send(result);
+      }
     });
 
     app.post("/assignments", async (req, res) => {
@@ -59,8 +71,17 @@ async function run() {
     });
 
     app.get("/totalAssignments", async (req, res) => {
-      const count = await assignments.estimatedDocumentCount();
-      res.send({ count });
+      const difficulty = req.query.difficulty;
+      console.log(difficulty);
+      if (difficulty === "" || difficulty === "all") {
+        const count = await assignments.estimatedDocumentCount();
+        res.send({ count });
+      } else {
+        const count = await assignments.countDocuments({
+          difficulty: difficulty,
+        });
+        res.send({ count });
+      }
     });
   } finally {
     // await client.close();
