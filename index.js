@@ -45,7 +45,7 @@ async function run() {
       const difficulty = req.query.difficulty;
       const query = { difficulty: difficulty };
       // console.log(page, size, difficulty);
-      console.log(difficulty);
+      // console.log(difficulty);
       if (difficulty === "" || difficulty === "all") {
         const result = await assignments
           .find()
@@ -69,9 +69,18 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/assignment", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+
+      // console.log(id);
+      const result = await assignments.findOne(query);
+      res.send(result);
+    });
+
     app.get("/totalAssignments", async (req, res) => {
       const difficulty = req.query.difficulty;
-      console.log(difficulty);
+      // console.log(difficulty);
       if (difficulty === "" || difficulty === "all") {
         const count = await assignments.estimatedDocumentCount();
         res.send({ count });
@@ -86,14 +95,41 @@ async function run() {
     app.post("/assignments", async (req, res) => {
       const assignment = req.body;
       const result = await assignments.insertOne(assignment);
-      console.log(assignment);
+      // console.log(assignment);
+      res.send(result);
+    });
+
+    app.put("/assignment", async (req, res) => {
+      const id = req.query.id;
+      const assignment = req.body;
+      const filter = { _id: new ObjectId(id) };
+      // console.log(id);
+      const options = { upsert: true };
+      const updatedAssignment = {
+        $set: {
+          title: assignment.title,
+          marks: assignment.marks,
+          description: assignment.description,
+          url: assignment.url,
+          difficulty: assignment.difficulty,
+          deadline: assignment.deadline,
+        },
+      };
+
+      // console.log(updatedAssignment);
+
+      const result = await assignments.updateOne(
+        filter,
+        updatedAssignment,
+        options
+      );
       res.send(result);
     });
 
     app.delete("/assignments", async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
-      console.log(query);
+      // console.log(query);
       const result = await assignments.deleteOne(query);
       res.send(result);
     });
