@@ -71,7 +71,8 @@ async function run() {
     });
 
     app.get("/pending", async (req, res) => {
-      const result = await submittedAssignments.find().toArray();
+      const query = { obtainedMarks: "" };
+      const result = await submittedAssignments.find(query).toArray();
       res.send(result);
     });
 
@@ -149,6 +150,7 @@ async function run() {
         $set: {
           obtainedMarks: marksAndFeedback.obtainedMarks,
           feedback: marksAndFeedback.feedback,
+          status: marksAndFeedback.status,
         },
       };
 
