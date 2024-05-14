@@ -38,6 +38,7 @@ async function run() {
 
     const database = client.db("studyBuddy");
     const assignments = database.collection("assignments");
+    const submittedAssignments = database.collection("submittedAssignments");
 
     app.get("/assignments", async (req, res) => {
       const page = parseInt(req.query.page);
@@ -96,6 +97,13 @@ async function run() {
       const assignment = req.body;
       const result = await assignments.insertOne(assignment);
       // console.log(assignment);
+      res.send(result);
+    });
+
+    app.post("/submission", async (req, res) => {
+      const submission = req.body;
+      console.log(submission);
+      const result = await submittedAssignments.insertOne(submission);
       res.send(result);
     });
 
