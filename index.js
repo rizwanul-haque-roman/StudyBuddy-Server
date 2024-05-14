@@ -70,6 +70,11 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/pending", async (req, res) => {
+      const result = await submittedAssignments.find().toArray();
+      res.send(result);
+    });
+
     app.get("/assignment", async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
@@ -129,6 +134,29 @@ async function run() {
       const result = await assignments.updateOne(
         filter,
         updatedAssignment,
+        options
+      );
+      res.send(result);
+    });
+
+    app.patch("/submission", async (req, res) => {
+      const marksAndFeedback = req.body;
+      const id = marksAndFeedback.id;
+      const filter = { _id: new ObjectId(id) };
+      // console.log(id);
+      const options = { upsert: false };
+      const updatedSubmission = {
+        $set: {
+          obtainedMarks: marksAndFeedback.obtainedMarks,
+          feedback: marksAndFeedback.feedback,
+        },
+      };
+
+      console.log("This is filter:", filter);
+
+      const result = await submittedAssignments.updateOne(
+        filter,
+        updatedSubmission,
         options
       );
       res.send(result);
