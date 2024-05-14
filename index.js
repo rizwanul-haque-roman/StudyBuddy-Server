@@ -76,6 +76,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/mySubmission", async (req, res) => {
+      const email = req.query.email;
+      const query = { submitterEmail: email };
+      const result = await submittedAssignments.find(query).toArray();
+      res.send(result);
+    });
+
     app.get("/assignment", async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
