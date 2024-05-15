@@ -1,6 +1,8 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 3000;
@@ -16,6 +18,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uzy5irc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -28,6 +31,31 @@ const client = new MongoClient(uri, {
   },
 });
 
+/**
+ * =============================================
+ *          custom middleware
+ * =============================================
+ */
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+
+    req.user = decoded;
+    next();
+  });
+
+  // next();
+};
+
 async function run() {
   try {
     // await client.connect();
@@ -36,17 +64,51 @@ async function run() {
     //   "Pinged your deployment. You successfully connected to MongoDB!"
     // );
 
+    /**
+     * =============================================
+     *           Auth Related API (JWT)
+     * =============================================
+     */
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    };
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("token", token, cookieOptions).send({ success: true });
+    });
+
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+    });
+    /**
+     * =============================================
+     *            DATABASE & COLLECTION
+     * =============================================
+     */
+
     const database = client.db("studyBuddy");
     const assignments = database.collection("assignments");
     const submittedAssignments = database.collection("submittedAssignments");
+
+    /**
+     * =============================================
+     *                GET API
+     * =============================================
+     */
 
     app.get("/assignments", async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const difficulty = req.query.difficulty;
       const query = { difficulty: difficulty };
-      // console.log(page, size, difficulty);
-      // console.log(difficulty);
       if (difficulty === "" || difficulty === "all") {
         const result = await assignments
           .find()
@@ -70,14 +132,25 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/pending", async (req, res) => {
+    app.get("/pending", verifyToken, async (req, res) => {
+      const email = req.query.email;
+
+      if (req.user.email !== email) {
+        return res.status(403).send({ message: "forbidded access" });
+      }
+
       const query = { obtainedMarks: "" };
       const result = await submittedAssignments.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/mySubmission", async (req, res) => {
+    app.get("/mySubmission", verifyToken, async (req, res) => {
       const email = req.query.email;
+
+      if (req.user.email !== email) {
+        return res.status(403).send({ message: "forbidded access" });
+      }
+
       const query = { submitterEmail: email };
       const result = await submittedAssignments.find(query).toArray();
       res.send(result);
@@ -86,15 +159,12 @@ async function run() {
     app.get("/assignment", async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
-
-      // console.log(id);
       const result = await assignments.findOne(query);
       res.send(result);
     });
 
     app.get("/totalAssignments", async (req, res) => {
       const difficulty = req.query.difficulty;
-      // console.log(difficulty);
       if (difficulty === "" || difficulty === "all") {
         const count = await assignments.estimatedDocumentCount();
         res.send({ count });
@@ -106,25 +176,34 @@ async function run() {
       }
     });
 
+    /**
+     * =============================================
+     *                POST API
+     * =============================================
+     */
+
     app.post("/assignments", async (req, res) => {
       const assignment = req.body;
       const result = await assignments.insertOne(assignment);
-      // console.log(assignment);
       res.send(result);
     });
 
     app.post("/submission", async (req, res) => {
       const submission = req.body;
-      console.log(submission);
       const result = await submittedAssignments.insertOne(submission);
       res.send(result);
     });
+
+    /**
+     * =============================================
+     *            PUT & PATCH API
+     * =============================================
+     */
 
     app.put("/assignment", async (req, res) => {
       const id = req.query.id;
       const assignment = req.body;
       const filter = { _id: new ObjectId(id) };
-      // console.log(id);
       const options = { upsert: true };
       const updatedAssignment = {
         $set: {
@@ -136,8 +215,6 @@ async function run() {
           deadline: assignment.deadline,
         },
       };
-
-      // console.log(updatedAssignment);
 
       const result = await assignments.updateOne(
         filter,
@@ -151,7 +228,6 @@ async function run() {
       const marksAndFeedback = req.body;
       const id = marksAndFeedback.id;
       const filter = { _id: new ObjectId(id) };
-      // console.log(id);
       const options = { upsert: false };
       const updatedSubmission = {
         $set: {
@@ -161,8 +237,6 @@ async function run() {
         },
       };
 
-      console.log("This is filter:", filter);
-
       const result = await submittedAssignments.updateOne(
         filter,
         updatedSubmission,
@@ -171,10 +245,15 @@ async function run() {
       res.send(result);
     });
 
+    /**
+     * =============================================
+     *                DELETE API
+     * =============================================
+     */
+
     app.delete("/assignments", async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
-      // console.log(query);
       const result = await assignments.deleteOne(query);
       res.send(result);
     });
