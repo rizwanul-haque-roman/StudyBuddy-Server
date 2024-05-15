@@ -77,14 +77,14 @@ async function run() {
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-      console.log("Generating token for:", user);
+      // console.log("Generating token for:", user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
       res.cookie("token", token, cookieOptions).send({ success: true });
     });
 
     app.post("/logout", async (req, res) => {
       const user = req.body;
-      console.log("logging out", user);
+      // console.log("logging out", user);
       res
         .clearCookie("token", { ...cookieOptions, maxAge: 0 })
         .send({ success: true });
